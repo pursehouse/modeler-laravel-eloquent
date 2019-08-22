@@ -108,7 +108,7 @@ abstract class HasOneOrMany implements Relation
      */
     protected function needsLocalKey()
     {
-        return $this->parent->getPrimaryKey() != $this->localKey();
+        return !in_array( $this->localKey(), $this->parent->getPrimaryKeys() );
     }
 
     /**

@@ -151,9 +151,13 @@ class BelongsTo implements Relation
      */
     protected function needsOtherKey()
     {
-        $defaultOtherKey = $this->related->getPrimaryKey();
+        if( count( $this->related->getPrimaryKeys() ) == 1 ) {
+            $defaultOtherKey = $this->related->getPrimaryKeys()[0];
+            return $defaultOtherKey != $this->otherKey();
+        }
 
-        return $defaultOtherKey != $this->otherKey();
+        return true;
+
     }
 
     /**

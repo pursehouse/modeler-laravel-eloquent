@@ -451,7 +451,12 @@ class Factory
         }
 
         if ($model->hasCustomPrimaryKey()) {
-            $body .= $this->class->field('primaryKey', $model->getPrimaryKey());
+            $primaryKeys = $model->getPrimaryKeys();
+            if( count( $primaryKeys ) == 1 ) {
+                $body .= $this->class->field('primaryKey', current( $primaryKeys ) );
+            } else {
+                $body .= $this->class->field('primaryKey', $primaryKeys );
+            }
         }
 
         if ($model->doesNotAutoincrement()) {

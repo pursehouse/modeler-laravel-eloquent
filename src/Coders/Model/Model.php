@@ -128,6 +128,11 @@ class Model
     protected $primaryKeyColumn;
 
     /**
+     * @var \Illuminate\Support\Fluent[]
+     */
+    protected $primaryKeyColumns;
+
+    /**
      * @var int
      */
     protected $perPage;
@@ -275,8 +280,8 @@ class Model
             $this->hidden[] = $propertyName;
         }
 
-        if ($column->name == $this->getPrimaryKey()) {
-            $this->primaryKeyColumn = $column;
+        if ( is_array( $this->getPrimaryKeys() ) && in_array( $column->name, $this->getPrimaryKeys() ) ) {
+            $this->primaryKeyColumns[] = $column;
         }
 
         if ($this->isFillable($column->name)) {
@@ -791,7 +796,7 @@ class Model
     public function hasCustomPrimaryKey()
     {
         return count($this->primaryKeys->columns) == 1 &&
-               $this->getPrimaryKey() != $this->getDefaultPrimaryKeyField();
+               $this->getPrimaryKeys()[0] != $this->getDefaultPrimaryKeyField();
     }
 
     /**
@@ -800,6 +805,17 @@ class Model
     public function getDefaultPrimaryKeyField()
     {
         return 'id';
+    }
+
+    /**
+     * @return array|null
+     */
+    public function getPrimaryKeys()
+    {
+        if (empty($this->primaryKeys->columns)) {
+            return;
+        }
+        return $this->primaryKeys->columns;
     }
 
     /**
@@ -820,6 +836,19 @@ class Model
      * @return string
      * @todo: check
      */
+    public function getPrimaryKeyTypes()
+    {
+        $types = [];
+        foreach( $this->primaryKeyColumns as $key ) {
+            $types[] = $key->type;
+        }
+        return $types;
+    }
+
+    /**
+     * @return string
+     * @todo: check
+     */
     public function getPrimaryKeyType()
     {
         return $this->primaryKeyColumn->type;
@@ -832,7 +861,10 @@ class Model
      */
     public function hasCustomPrimaryKeyCast()
     {
-        return $this->getPrimaryKeyType() != $this->getDefaultPrimaryKeyType();
+        if( count( $this->primaryKeyColumns ) != 1 ) {
+            return true;
+        }
+        return $this->getPrimaryKeyTypes()[0] != $this->getDefaultPrimaryKeyType();
     }
 
     /**
@@ -856,10 +888,11 @@ class Model
      */
     public function autoincrement()
     {
-        if ($this->primaryKeyColumn) {
-            return $this->primaryKeyColumn->autoincrement === true;
+        if ( !empty( $this->primaryKeyColumns ) ) {
+            foreach( $this->primaryKeyColumns as $key ) {
+                return $key->autoincrement === true;
+            }
         }
-
         return false;
     }
 
@@ -960,11 +993,13 @@ class Model
      */
     public function getCasts()
     {
-        if (
-            array_key_exists($this->getPrimaryKey(), $this->casts) &&
-            $this->autoincrement()
-        ) {
-            unset($this->casts[$this->getPrimaryKey()]);
+
+        if( $this->autoincrement() ) {
+            foreach( $this->getPrimaryKeys() as $keyField ) {
+                if( array_key_exists($keyField, $this->casts) ) {
+                    unset($this->casts[$keyField]);
+                }
+            }
         }
 
         return $this->casts;
