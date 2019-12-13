@@ -222,12 +222,15 @@ WHERE
         $fullTable = $blueprint->qualifiedTable();
 
         $sql = "
-SELECT a.attname
-FROM   pg_index i
-JOIN   pg_attribute a ON a.attrelid = i.indrelid
-                     AND a.attnum = ANY(i.indkey)
-WHERE  i.indrelid = '$fullTable'::regclass
-AND    i.indisprimary;
+SELECT
+    a.attname
+FROM
+            pg_index        i
+    JOIN    pg_attribute    a ON    a.attrelid = i.indrelid
+                                AND a.attnum = ANY(i.indkey)
+WHERE
+        i.indrelid = '$fullTable'::regclass
+    AND i.indisprimary;
 ";
 
         $res = $this->arraify($this->connection->select($sql));
@@ -278,21 +281,33 @@ ORDER BY
         $res = $this->arraify($this->connection->select($sql));
 
         foreach ($res as $row) {
-            $columnNames = explode(',', trim($row['column_names'], '}{'));
 
-            $columns = [];
-            foreach ($columnNames as $v) {
-                $columns[] = $this->columnize($v);
+            $columns = $this->columnize( $row['column_names'] );
+
+//             $columnNames = explode(',', trim($row['column_names'], '}{'));
+//             $columns = [];
+//             foreach ($columnNames as $v) {
+//                 $columns[] = $this->columnize($v);
+//             }
+
+            if($row['is_primary'] == true ) {
+                $indexType = 'primary';
+            } elseif($row['is_unique'] == true ) {
+                $indexType = 'unique';
+            } else {
+                $indexType = 'index';
             }
 
             $index = [
-                'name'    => ($row['is_unique'] == true ? 'unique' : 'index'),
+                'name'    => $indexType,
                 'columns' => $columns,
                 'index'   => $row['index_name'],
             ];
 
             $blueprint->withIndex(new Fluent($index));
+
         }
+
     }
 
     /**
@@ -354,7 +369,13 @@ WHERE
      */
     protected function columnize($columns)
     {
-        return array_map('trim', explode(',', $columns));
+        return array_map(
+            'trim',
+            explode(
+                ',',
+                trim( $columns, '}{' )
+            )
+        );
     }
 
     /**
