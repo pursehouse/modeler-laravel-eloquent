@@ -160,6 +160,8 @@ class BelongsToMany implements Relation
      */
     protected function needsForeignKey()
     {
+        // TODO review logic if this is fixable
+        return true;
         $defaultForeignKey = $this->parentRecordName().'_id';
 
         if ($this->parent->shouldQualifyTableName()) {
